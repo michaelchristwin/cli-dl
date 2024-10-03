@@ -3,7 +3,10 @@ package commandline
 import (
 	"flag"
 	"fmt"
+	"regexp"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 const Version string = "0.0.1"
@@ -45,6 +48,48 @@ func (s *stringSlice) Set(value string) error {
 	return nil
 }
 
+var speedRegex = regexp.MustCompile(`([0-9\.]+)(M|K)`)
+
+func parseSpeedLimit(value string) (*int64, error) {
+	input := strings.ToUpper(value)
+	match := speedRegex.FindStringSubmatch(input)
+	if match == nil {
+		return nil, fmt.Errorf("invalid speed limit format: %s", input)
+	}
+
+	number, err := strconv.ParseFloat(match[1], 64)
+	if err != nil {
+		return nil, err
+	}
+
+	var speed int64
+	switch match[2] {
+	case "M":
+		speed = int64(number * 1024 * 1024)
+	case "K":
+		speed = int64(number * 1024)
+	default:
+		return nil, fmt.Errorf("unknown unit: %s", match[2])
+	}
+
+	return &speed, nil
+}
+
+type speedFlag int64
+
+func (s *speedFlag) String() string {
+	return fmt.Sprintf("%d", *s)
+}
+
+func (s *speedFlag) Set(value string) error {
+	parsedSpeed, err := parseSpeedLimit(value)
+	if err != nil {
+		return err
+	}
+	*s = speedFlag(*parsedSpeed)
+	return nil
+}
+
 type Options struct {
 	Input                  string
 	TmpDir                 *string
@@ -82,7 +127,7 @@ type Options struct {
 	ConcurrentDownload     bool
 	NoLog                  bool
 	AdKeywords             *stringSlice
-	MaxSpeed               int64
+	MaxSpeed               *speedFlag
 }
 
 func CommandInvoker() Options {
@@ -90,6 +135,7 @@ func CommandInvoker() Options {
 		Headers:    new(headerMap),
 		Keys:       new(stringSlice),
 		AdKeywords: new(stringSlice),
+		MaxSpeed:   new(speedFlag),
 	}
 
 	flag.StringVar(&opts.Input, "input", "", "Input URL or file")
@@ -129,8 +175,8 @@ func CommandInvoker() Options {
 	flag.BoolVar(&opts.ConcurrentDownload, "concurrent-download", false, "Enable concurrent downloads")
 	flag.BoolVar(&opts.NoLog, "no-log", false, "Disable logging")
 	flag.Var(opts.AdKeywords, "ad-keyword", "Ad keywords (can specify multiple)")
-	flag.Int64Var(&opts.MaxSpeed, "R", 0, "Max download speed (in bytes/sec)")
-	flag.Int64Var(&opts.MaxSpeed, "max-speed", 0, "Max download speed (in bytes/sec)")
+	flag.Var(opts.MaxSpeed, "R", "Max download speed (in bytes/sec)")
+	flag.Var(opts.MaxSpeed, "max-speed", "Max download speed (in bytes/sec)")
 
 	//Parse all flags
 	flag.Parse()
