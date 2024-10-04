@@ -151,12 +151,12 @@ func CommandInvoker() Options {
 		Keys:             new(stringSlice),
 		AdKeywords:       new(stringSlice),
 		MaxSpeed:         new(speedFlag),
-		TmpDir:           new(string), // Initialize pointer
-		SaveDir:          new(string), // Initialize pointer
-		SaveName:         new(string), // Initialize pointer
-		SavePattern:      new(string), // Initialize pointer
-		UILanguage:       new(string), // Initialize pointer
-		UrlProcessorArgs: new(string), // Initialize pointer
+		TmpDir:           new(string),
+		SaveDir:          new(string),
+		SaveName:         new(string),
+		SavePattern:      new(string),
+		UILanguage:       new(string),
+		UrlProcessorArgs: new(string),
 	}
 
 	flag.StringVar(&opts.Input, "input", "", "Input URL or file")
