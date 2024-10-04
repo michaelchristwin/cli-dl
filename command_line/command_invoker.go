@@ -11,24 +11,41 @@ import (
 
 const Version string = "0.0.1"
 
+// headerMap is a custom type that represents a map of headers.
 type headerMap map[string]string
 
+// headersVar is a wrapper for the headerMap to satisfy the flag.Value interface.
 type headersVar struct {
 	headers *headerMap
 }
 
-// String returns the string representation of the headerMap
+// String returns the string representation of the headerMap.
 func (h *headersVar) String() string {
-	return fmt.Sprintf("%v", *h.headers)
+	// Return a formatted string representation of the headers.
+	var result []string
+	for key, value := range *h.headers {
+		result = append(result, fmt.Sprintf("%s:%s", key, value))
+	}
+	return strings.Join(result, ", ")
 }
 
+// Set parses a key:value string and adds it to the headerMap.
 func (h *headersVar) Set(value string) error {
 	// Expecting key:value format
-	var key, val string
-	_, err := fmt.Sscanf(value, "%[^:]:%s", &key, &val)
-	if err != nil {
-		return fmt.Errorf("invalid header format, expecting key:value")
+	parts := strings.SplitN(value, ":", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid header format, expecting key:value, got: %s", value)
 	}
+
+	key := strings.TrimSpace(parts[0])
+	val := strings.TrimSpace(parts[1])
+
+	// Initialize the headerMap if it is nil
+	if *h.headers == nil {
+		*h.headers = make(headerMap)
+	}
+
+	// Add the key-value pair to the headerMap
 	(*h.headers)[key] = val
 	return nil
 }
@@ -40,16 +57,13 @@ func (s *stringSlice) String() string {
 }
 
 func (s *stringSlice) Set(value string) error {
-	// Allow only one value per token; reject if already has a value
-	if len(*s) > 0 {
-		return fmt.Errorf("only one argument per token is allowed for flag 'key'")
-	}
 	*s = append(*s, value)
 	return nil
 }
 
 var speedRegex = regexp.MustCompile(`([0-9\.]+)(M|K)`)
 
+// Parse speed limit
 func parseSpeedLimit(value string) (*int64, error) {
 	input := strings.ToUpper(value)
 	match := speedRegex.FindStringSubmatch(input)
@@ -128,14 +142,21 @@ type Options struct {
 	NoLog                  bool
 	AdKeywords             *stringSlice
 	MaxSpeed               *speedFlag
+	UseSystemProxy         bool
 }
 
 func CommandInvoker() Options {
 	opts := Options{
-		Headers:    new(headerMap),
-		Keys:       new(stringSlice),
-		AdKeywords: new(stringSlice),
-		MaxSpeed:   new(speedFlag),
+		Headers:          new(headerMap),
+		Keys:             new(stringSlice),
+		AdKeywords:       new(stringSlice),
+		MaxSpeed:         new(speedFlag),
+		TmpDir:           new(string), // Initialize pointer
+		SaveDir:          new(string), // Initialize pointer
+		SaveName:         new(string), // Initialize pointer
+		SavePattern:      new(string), // Initialize pointer
+		UILanguage:       new(string), // Initialize pointer
+		UrlProcessorArgs: new(string), // Initialize pointer
 	}
 
 	flag.StringVar(&opts.Input, "input", "", "Input URL or file")
@@ -144,7 +165,7 @@ func CommandInvoker() Options {
 	flag.StringVar(opts.SavePattern, "save-pattern", "", "Set")
 	flag.StringVar(opts.UILanguage, "ui-language", "", "")
 	flag.StringVar(opts.UrlProcessorArgs, "urlprocessor-args", "", "")
-	flag.Var(opts.Keys, "keys", "Pass decryption key(s) to mp4decrypt/shaka-packager. format:\r\n--key KID1:KEY1 --key KID2:KEY2")
+	flag.Var(opts.Keys, "key", "Pass decryption key(s) to mp4decrypt/shaka-packager. format:\r\n--key KID1:KEY1 --key KID2:KEY2")
 	flag.StringVar(&opts.KeyTextFile, "key-text-file", "", "")
 	flag.Var(&headersVar{opts.Headers}, "H", "Specify headers in the format key:value")
 	flag.Var(&headersVar{opts.Headers}, "header", "Specify headers in the format key:value")
@@ -177,6 +198,7 @@ func CommandInvoker() Options {
 	flag.Var(opts.AdKeywords, "ad-keyword", "Ad keywords (can specify multiple)")
 	flag.Var(opts.MaxSpeed, "R", "Max download speed (in bytes/sec)")
 	flag.Var(opts.MaxSpeed, "max-speed", "Max download speed (in bytes/sec)")
+	flag.BoolVar(&opts.UseSystemProxy, "use-system-proxy", true, "")
 
 	//Parse all flags
 	flag.Parse()
