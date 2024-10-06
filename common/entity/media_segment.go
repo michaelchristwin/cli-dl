@@ -50,15 +50,15 @@ func (m *MediaSegment) isEquals(other *MediaSegment) bool {
 	return true
 }
 
-func hashString(h hash.Hash64, s *string) {
+func hashPointerString(h hash.Hash64, s *string) {
 	if s != nil {
 		h.Write([]byte(*s))
 	} else {
 		h.Write([]byte("nil"))
 	}
 }
-func hashString2(h hash.Hash64, s string) {
-	_, err := h.Write([]byte(s)) // Hash the value directly
+func hashString(h hash.Hash64, s string) {
+	_, err := h.Write([]byte(s))
 	if err != nil {
 		log.Printf("Error writing to hash: %v", err)
 	}
@@ -85,11 +85,11 @@ func (m *MediaSegment) GetHashCode() int {
 	// Hash each field
 	hashInt64(h, &m.Index)
 	hashFloat64(h, m.Duration)
-	hashString(h, m.Title)
+	hashPointerString(h, m.Title)
 	hashInt64(h, m.StartRange)
 	hashInt64(h, m.StopRange)
 	hashInt64(h, m.ExpectLength)
-	hashString2(h, m.Url)
+	hashString(h, m.Url)
 
 	// Convert hash to int (take lower bits, ensure compatibility)
 	return int(h.Sum64())
