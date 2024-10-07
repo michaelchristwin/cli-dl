@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"github.com/michaelchristwin/N_M3U8DL-RE-go.git/common/utils"
 	"hash"
 	"hash/fnv"
 	"log"
@@ -40,10 +41,10 @@ func (m *MediaSegment) isEquals(other *MediaSegment) bool {
 	}
 
 	// Compare pointer fields (nullable in Go)
-	if !stringEquals(m.Title, other.Title) ||
-		!int64Equals(m.StartRange, other.StartRange) ||
-		!int64Equals(m.StopRange, other.StopRange) ||
-		!int64Equals(m.ExpectLength, other.ExpectLength) {
+	if !utils.StringEquals(m.Title, other.Title) ||
+		!utils.Int64Equals(m.StartRange, other.StartRange) ||
+		!utils.Int64Equals(m.StopRange, other.StopRange) ||
+		!utils.Int64Equals(m.ExpectLength, other.ExpectLength) {
 		return false
 	}
 
@@ -95,23 +96,4 @@ func (m *MediaSegment) GetHashCode() int {
 	return int(h.Sum64())
 }
 
-func stringEquals(a, b *string) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
-}
-
 // Helper function to compare two *int64 values
-func int64Equals(a, b *int64) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
-}
