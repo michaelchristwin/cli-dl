@@ -60,6 +60,16 @@ func (l *Logger) InitLogFile() {
 	}
 }
 
+func (l *Logger) GetCurrTime() string {
+	return time.Now().Format("15:04:05.000")
+}
+
+func (l *Logger) HandleLog(write string, subWrite string) {
+	if write == "" {
+
+	}
+}
+
 func GetCommandLine() string {
 	return fmt.Sprintf("%s %s", os.Args[0], filepath.Join(os.Args[1:]...))
 }

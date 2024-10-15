@@ -6,116 +6,50 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 )
 
-// NonAnsiWriter removes ANSI escape sequences from output
+// NonAnsiWriter is a custom writer that removes ANSI escape sequences
 type NonAnsiWriter struct {
-	out     io.Writer
 	lastOut string
-	mu      sync.Mutex
-}
-
-func NewNonAnsiWriter(w io.Writer) *NonAnsiWriter {
-	return &NonAnsiWriter{
-		out: w,
-	}
 }
 
 func (w *NonAnsiWriter) Write(p []byte) (n int, err error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	input := string(p)
-	if w.lastOut == input {
+	value := string(p)
+	if w.lastOut == value {
 		return len(p), nil
 	}
-	w.lastOut = input
-
-	output := w.removeAnsiEscapeSequences(input)
+	w.lastOut = value
+	output := w.removeAnsiEscapeSequences(value)
 	if strings.TrimSpace(output) == "" {
 		return len(p), nil
 	}
-
-	return w.out.Write([]byte(output))
+	return fmt.Print(output)
 }
 
 func (w *NonAnsiWriter) removeAnsiEscapeSequences(input string) string {
-	patterns := []string{
-		`\x1B\[(\d+;?)+m`,
-		`\[\??\d+[AKlh]`,
-	}
-
-	output := input
-	for _, pattern := range patterns {
-		re := regexp.MustCompile(pattern)
-		output = re.ReplaceAllString(output, "")
-	}
-
-	// Remove line breaks followed by spaces
-	re := regexp.MustCompile(`[\r\n] +`)
-	output = re.ReplaceAllString(output, "")
-
+	output := regexp.MustCompile(`\x1B\[(\d+;?)+m`).ReplaceAllString(input, "")
+	output = regexp.MustCompile(`\[\??\d+[AKlh]`).ReplaceAllString(output, "")
+	output = regexp.MustCompile(`[\r\n] +`).ReplaceAllString(output, "")
 	return output
 }
 
-// CustomAnsiConsole provides ANSI-aware console output
+// CustomAnsiConsole represents a console capable of writing ANSI escape sequences
 type CustomAnsiConsole struct {
-	out         io.Writer
-	forceAnsi   bool
-	noAnsiColor bool
+	writer io.Writer
 }
 
-var defaultConsole = &CustomAnsiConsole{
-	out: os.Stdout,
-}
-
-// InitConsole initializes the console with specified settings
-func InitConsole(forceAnsi, noAnsiColor bool) {
+func NewCustomAnsiConsole(forceAnsi, noAnsiColor bool) *CustomAnsiConsole {
 	var writer io.Writer = os.Stdout
 	if noAnsiColor {
-		writer = NewNonAnsiWriter(os.Stdout)
+		writer = &NonAnsiWriter{}
 	}
-
-	defaultConsole = &CustomAnsiConsole{
-		out:         writer,
-		forceAnsi:   forceAnsi,
-		noAnsiColor: noAnsiColor,
-	}
+	return &CustomAnsiConsole{writer: writer}
 }
 
-// Markup writes the specified markup to the console
-func Markup(format string, a ...interface{}) {
-	defaultConsole.markup(false, format, a...)
+func (c *CustomAnsiConsole) Markup(value string) {
+	fmt.Fprint(c.writer, value)
 }
 
-// MarkupLine writes the specified markup followed by a newline to the console
-func MarkupLine(format string, a ...interface{}) {
-	defaultConsole.markup(true, format, a...)
+func (c *CustomAnsiConsole) MarkupLine(value string) {
+	fmt.Fprintln(c.writer, value)
 }
-
-func (c *CustomAnsiConsole) markup(newline bool, format string, a ...interface{}) {
-	// This is a simplified markup implementation
-	// You may want to add more sophisticated markup parsing here
-	text := fmt.Sprintf(format, a...)
-
-	if newline {
-		fmt.Fprintln(c.out, text)
-	} else {
-		fmt.Fprint(c.out, text)
-	}
-}
-
-// Additional utility functions can be added here as needed
-
-// Example color constants
-const (
-	Reset  = "\033[0m"
-	Red    = "\033[31m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-	Purple = "\033[35m"
-	Cyan   = "\033[36m"
-	Gray   = "\033[37m"
-)
