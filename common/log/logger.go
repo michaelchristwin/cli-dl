@@ -72,6 +72,7 @@ func (l *Logger) HandleLog(write string, subWrite string) {
 
 	if write == "" {
 		console.MarkupLine(write)
+
 	} else {
 		console.MarkupLine(write)
 		fmt.Println(subWrite)
